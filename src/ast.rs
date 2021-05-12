@@ -16,27 +16,27 @@ pub enum BinaryOperator {
 pub enum Expression {
   Int(i64),
   Ident(Ident),
-  BinOp(BinaryOperator, Expression, Expression),
-  Group(Expression),
+  BinOp(BinaryOperator, Box<Expression>, Box<Expression>),
+  Group(Box<Expression>),
   Input,
-  FuncCall(Ident, Vec<Expression>)
+  FuncCall(Ident, Vec<Box<Expression>>)
 }
 
 #[derive(Debug)]
 pub enum Statement {
   Assign(Ident, Expression),
   Output(Expression),
-  ComposeTwo(Statement, Statement),
+  ComposeTwo(Box<Statement>, Box<Statement>),
   Compose(Vec<Statement>),
   Empty,
   If {
     cond: Expression,
-    then: Option<Statement>,
-    else_: Option<Statement>
+    then: Option<Box<Statement>>,
+    else_: Option<Box<Statement>>
   },
   While {
     cond: Expression,
-    then: Option<Statement>,
+    then: Option<Box<Statement>>,
   },
 }
 
