@@ -1,3 +1,5 @@
+
+#[derive(Debug)]
 pub struct Ident(pub String);
 
 #[derive(Debug)]
@@ -17,19 +19,20 @@ pub enum Expression {
   BinOp(BinaryOperator, Expression, Expression),
   Group(Expression),
   Input,
-  FuncCall(Ident, Expression[])
+  FuncCall(Ident, Vec<Expression>)
 }
 
 #[derive(Debug)]
 pub enum Statement {
   Assign(Ident, Expression),
   Output(Expression),
-  Compose(Statement, Statement),
-  Empty(),
+  ComposeTwo(Statement, Statement),
+  Compose(Vec<Statement>),
+  Empty,
   If {
     cond: Expression,
     then: Option<Statement>,
-    else: Option<Statement>
+    else_: Option<Statement>
   },
   While {
     cond: Expression,
@@ -37,12 +40,16 @@ pub enum Statement {
   },
 }
 
+#[derive(Debug)]
 pub struct Function {
   pub name: Ident,
-  pub parameters: Ident[],
-  pub declared_vars: Ident[],
+  pub parameters: Vec<Ident>,
+  pub declared_vars: Vec<Ident>,
   pub body: Statement,
-  pub return_expr: Expression
+  pub return_expr: Expression,
 }
 
-pub struct Program(pub functions: Vec<Function>);
+#[derive(Debug)]
+pub struct Program {
+  pub functions: Vec<Function>
+}
