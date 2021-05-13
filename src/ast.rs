@@ -2,6 +2,12 @@
 #[derive(Debug)]
 pub struct Ident(pub String);
 
+impl From<&'_ str> for Ident {
+  fn from (s: &str) -> Ident {
+    return Ident(s.to_string());
+  }
+}
+
 #[derive(Debug)]
 pub enum BinaryOperator {
   Add,
