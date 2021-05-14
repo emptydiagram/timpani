@@ -1,4 +1,4 @@
-use crate::ast::{
+use timpani::ast::{
     BinaryOperator,
     Expression,
     Function,
@@ -7,8 +7,7 @@ use crate::ast::{
     Statement
 };
 
-mod ast;
-mod parser;
+use timpani::parser::parseFunction;
 
 fn main() {
     println!("Hello, world!");
@@ -54,4 +53,11 @@ fn main() {
         functions: vec![add5, begin2]
     };
     println!("program =  {:?}", prog2);
+
+    println!("====================");
+
+    let textProg = "function begin() { return 5; }";
+    println!("parsing '{}'", textProg);
+    let parseResult = parseFunction(textProg);
+    println!(" result = {:?}", parseResult);
 }
