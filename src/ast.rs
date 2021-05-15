@@ -22,9 +22,9 @@ pub enum BinaryOperator {
 pub enum Expression {
   Int(i64),
   Ident(Ident),
-  BinOp(BinaryOperator, Box<Expression>, Box<Expression>),
   Group(Box<Expression>),
   Input,
+  BinOp(BinaryOperator, Box<Expression>, Box<Expression>),
   FuncCall(Ident, Vec<Box<Expression>>)
 }
 

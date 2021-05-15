@@ -56,7 +56,7 @@ fn main() {
 
     println!("====================");
 
-    let textProg = "function begin() { return 5; }";
+    let textProg = "function begin() { return -5; }";
     println!("parsing '{}'", textProg);
     let parseResult = parseFunction(textProg);
     println!(" result = {:?}", parseResult);

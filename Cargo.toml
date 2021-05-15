@@ -8,7 +8,6 @@ edition = "2018"
 
 [dependencies]
 regex = "1"
-thiserror = "1.0"
 
 [dependencies.nom]
 version = "6"
