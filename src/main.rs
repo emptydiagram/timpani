@@ -60,4 +60,11 @@ fn main() {
     println!("parsing '{}'", textProg);
     let parseResult = parseFunction(textProg);
     println!(" result = {:?}", parseResult);
+
+    println!("");
+
+    let textProg2 = "function id(x) { return x; }";
+    println!("parsing '{}'", textProg2);
+    let parseResult2 = parseFunction(textProg2);
+    println!(" result = {:?}", parseResult2);
 }
