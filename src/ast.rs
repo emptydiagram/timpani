@@ -25,7 +25,7 @@ pub enum Expression {
   Group(Box<Expression>),
   Input,
   BinOp(BinaryOperator, Box<Expression>, Box<Expression>),
-  FuncCall(Ident, Vec<Box<Expression>>)
+  FuncCall(Ident, Vec<Expression>)
 }
 
 #[derive(Debug)]

@@ -47,7 +47,7 @@ fn main() {
         parameters: vec![],
         declared_vars: vec![],
         body: Statement::Empty,
-        return_expr: Expression::FuncCall(Ident::from("add5"), vec![Box::new(Expression::Int(7))]),
+        return_expr: Expression::FuncCall(Ident::from("add5"), vec![Expression::Int(7)]),
     };
     let prog2 = Program {
         functions: vec![add5, begin2]

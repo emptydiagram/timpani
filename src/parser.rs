@@ -146,6 +146,21 @@ fn parse_parens<'a>(input: &'a str) -> PResult<'a, Box<Expression>> {
   Ok((rem, sub_expr))
 }
 
+fn parse_func_call<'a>(input: &'a str) -> PResult<'a, (Ident, Vec<Expression>)> {
+  let paren_open = tag("(");
+  let paren_close = tag(")");
+  // for now, hardcode Ident '(' ')'
+  let (the_input, (function_name, _, /* '(' */ _, _, maybe_arg_expr, _, /* ')' */ _ ))
+    = tuple(
+      (parse_ident, space0, paren_open, space0, opt(parse_expression), space0, paren_close)
+    )(input)?;
+
+  let mut arguments = vec![];
+  maybe_arg_expr.map(|arg| arguments.push(arg));
+
+  Ok((the_input, (function_name, arguments)))
+}
+
 fn parseStatement(input: &str) -> PResult<Statement> {
   failure(Error::new(input, ErrorKind::Not))
 }
@@ -166,13 +181,18 @@ fn parse_expression<'a>(input_text: &'a str) -> PResult<'a, Expression> {
       return Ok((rem, Expression::Input));
     }
   }
+  let func_call_result = parse_func_call(input_text);
+  if let Ok((rem, (ident, expressions))) = func_call_result {
+    return Ok((rem, Expression::FuncCall(ident, expressions)));
+  }
+
+  let parens_result = parse_parens(input_text);
+  if let Ok((rem, boxed_expr)) = parens_result {
+    return Ok((rem, Expression::Group(boxed_expr)));
+  }
 
   let ident_result = parse_ident(input_text);
-  if let Ok((rem, ident)) = ident_result {
-    return Ok((rem, Expression::Ident(ident)));
-  }
-  let parens_result = parse_parens(input_text);
-  parens_result.map(|(rem, boxed_expr)| (rem, Expression::Group(boxed_expr)))
+  ident_result.map(|(rem, ident)| (rem, Expression::Ident(ident)))
 }
 
 
@@ -240,6 +260,25 @@ mod tests {
       is_ident = true;
     }
     assert_eq!(is_ident, true);
+  }
+
+  #[test]
+  fn test_parse_expression_func_call() {
+    let mut parse_result = parse_expression("id(456)");
+    assert_eq!(parse_result.is_ok(), true);
+    let mut is_func_call = false;
+    if let Expression::FuncCall(ident, exprs) = parse_result.unwrap().1 {
+      is_func_call = true;
+      assert_eq!(ident.0, "id");
+      assert_eq!(exprs.len(), 1);
+
+      if let Expression::Int(i) = exprs[0] {
+        assert_eq!(i, 456);
+      } else {
+        panic!("Expected an integer expression.")
+      }
+    }
+    assert_eq!(is_func_call, true);
   }
 
   #[test]
