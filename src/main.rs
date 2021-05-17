@@ -7,7 +7,7 @@ use timpani::ast::{
     Statement
 };
 
-use timpani::parser::parseFunction;
+use timpani::parser::parse_function;
 
 fn main() {
     println!("Hello, world!");
@@ -56,15 +56,15 @@ fn main() {
 
     println!("====================");
 
-    let textProg = "function begin() { return -5; }";
-    println!("parsing '{}'", textProg);
-    let parseResult = parseFunction(textProg);
-    println!(" result = {:?}", parseResult);
+    let text_prog = "function begin() { return -5; }";
+    println!("parsing '{}'", text_prog);
+    let parse_result = parse_function(text_prog);
+    println!(" result = {:?}", parse_result);
 
     println!("");
 
-    let textProg2 = "function id(x) { return x; }";
-    println!("parsing '{}'", textProg2);
-    let parseResult2 = parseFunction(textProg2);
-    println!(" result = {:?}", parseResult2);
+    let text_prog2 = "function id(x) { return x; }";
+    println!("parsing '{}'", text_prog2);
+    let parse_result2 = parse_function(text_prog2);
+    println!(" result = {:?}", parse_result2);
 }

@@ -43,7 +43,7 @@ fn failure<T>(failure: Error<&str>) -> Result<T, nom::Err<Error<&str>>> {
 type PResult<'a, T> = IResult<&'a str, T>;
 
 // Func ::= "function" Id "(" Id* ")" "{" Stmt* "}"
-pub fn parseFunction<'a>(input: &'a str) -> PResult<'a, Function> {
+pub fn parse_function<'a>(input: &'a str) -> PResult<'a, Function> {
   let parse_fn = tag("function");
   let parse_return = tag("return");
   let paren_open = tag("(");
@@ -56,8 +56,8 @@ pub fn parseFunction<'a>(input: &'a str) -> PResult<'a, Function> {
   //   (parseFunction, space1, parseIdent, space0, parenOpen, space0, opt(parseIdent),
   //    many0(tuple((tag(","), space0, parseIdent, space0))), space0, parenClose)
   // )(input)?;
-  let (the_input, (/* 'function' */ _, _, functionName, _, /* '(' */ _, _, maybeParamIdent, _, /* ')' */ _, _,
-  /* '{' */ _, _, /* 'return' */ _, _, returnExpr, _, /* ';' */ _, _, /* '}' */ _)) = tuple(
+  let (the_input, (/* 'function' */ _, _, function_name, _, /* '(' */ _, _, maybe_param_indent, _, /* ')' */ _, _,
+  /* '{' */ _, _, /* 'return' */ _, _, return_expr, _, /* ';' */ _, _, /* '}' */ _)) = tuple(
     (parse_fn, space1, parse_ident, space0, paren_open, space0, opt(parse_ident), space0, paren_close, space0,
      brace_open, space0, parse_return, space0, parse_expression, space0, tag(";"), space0, brace_close)
   )(input)?;
@@ -66,19 +66,19 @@ pub fn parseFunction<'a>(input: &'a str) -> PResult<'a, Function> {
   // println!("idRest {:?}", idRest);
   println!("~~~");
   println!("theInput: {:?}", the_input);
-  println!("functionName = {:?}", functionName);
-  println!("maybeParamIdent: {:?}", maybeParamIdent);
-  println!("parsedExpr: {:?}", returnExpr);
+  println!("functionName = {:?}", function_name);
+  println!("maybeParamIdent: {:?}", maybe_param_indent);
+  println!("parsedExpr: {:?}", return_expr);
 
   let mut parameters = vec![];
-  maybeParamIdent.map(|ident| parameters.push(ident));
+  maybe_param_indent.map(|ident| parameters.push(ident));
 
   let the_function = Function {
-    name: functionName,
+    name: function_name,
     parameters: parameters,
     declared_vars: vec![],
     body: Statement::Empty,
-    return_expr: returnExpr,
+    return_expr: return_expr,
   };
   Ok((the_input, the_function))
 
@@ -97,10 +97,13 @@ pub fn parseFunction<'a>(input: &'a str) -> PResult<'a, Function> {
   // }
 }
 
+const IDENT_CONT_CHAR_REGEXP: &'static str = "^[a-zA-Z0-9_]";
+const IDENT_REGEXP: &'static str = "^[a-zA-Z_][a-zA-Z0-9_]*";
+
 
 fn parse_ident<'a>(input: &'a str) -> PResult<'a, Ident> {
   println!(" ::parseIdent, input = '{}'", input);
-  let re = regex::Regex::new(r"^[a-zA-Z_][a-zA-Z0-9_]*").unwrap();
+  let re = regex::Regex::new(IDENT_REGEXP).unwrap();
   let parser = nom::regexp::str::re_find::<Error<&'a str>>(re);
   let result = parser(input);
   result.map(|(rem, parsed)| (rem, Ident::from(parsed)))
@@ -121,25 +124,55 @@ fn parse_input<'a>(input: &'a str) -> PResult<'a, ()> {
   result.map(|(rem, _parsed)| (rem, ()))
 }
 
+fn parse_parens<'a>(input: &'a str) -> PResult<'a, Box<Expression>> {
+  if input.len() == 0 {
+    return failure(Error::new(input, ErrorKind::RegexpMatch))
+  }
+  if (input.as_bytes()[0] as char) != '(' {
+    return failure(Error::new(input, ErrorKind::RegexpMatch))
+  }
+
+  let parse_result = parse_expression(&input[1..input.len()-1]);
+  let (rem, sub_expr) = match parse_result {
+    Err(e) => return Err(e),
+    Ok((rem, expr)) => (rem, Box::new(expr)),
+  };
+
+
+  if (input.as_bytes()[input.len() - 1] as char) != ')' {
+    return failure(Error::new(input, ErrorKind::RegexpMatch))
+  }
+
+  Ok((rem, sub_expr))
+}
+
 fn parseStatement(input: &str) -> PResult<Statement> {
   failure(Error::new(input, ErrorKind::Not))
 }
 
-fn parse_expression<'a>(input: &'a str) -> PResult<'a, Expression> {
-  println!(" ::parseExpression, input = '{}'", input);
+fn parse_expression<'a>(input_text: &'a str) -> PResult<'a, Expression> {
+  println!(" ::parse_expression, input = '{}'", input_text);
   // FIXME: only parses ints
-  if let Ok((rem, parsed)) = parse_int(input) {
+  if let Ok((rem, parsed)) = parse_int(input_text) {
     return Ok((rem, Expression::Int(parsed)))
   }
   // int parse failed, try input
-  let input_result = tag::<&'a str, &'a str, nom::error::Error<&'a str>>("input")(input);
+  // let input_result = tag::<&'a str, &'a str, nom::error::Error<&'a str>>("input")(input);
+  let input_result = parse_input(input_text);
   if let Ok((rem, _)) = input_result {
-    if rem.len() == 0  {
+    let re = regex::Regex::new(IDENT_CONT_CHAR_REGEXP).unwrap();
+    let parser = nom::regexp::str::re_find::<Error<&'a str>>(re);
+    if parser(rem).is_err() {
       return Ok((rem, Expression::Input));
     }
   }
-  let ident_result = parse_ident(input);
-  ident_result.map(|(rem, ident)| (rem, Expression::Ident(ident)))
+
+  let ident_result = parse_ident(input_text);
+  if let Ok((rem, ident)) = ident_result {
+    return Ok((rem, Expression::Ident(ident)));
+  }
+  let parens_result = parse_parens(input_text);
+  parens_result.map(|(rem, boxed_expr)| (rem, Expression::Group(boxed_expr)))
 }
 
 
@@ -207,5 +240,61 @@ mod tests {
       is_ident = true;
     }
     assert_eq!(is_ident, true);
+  }
+
+  #[test]
+  fn test_parse_expression_parens() {
+    let mut parse_result = parse_expression("(123)");
+    assert_eq!(parse_result.is_ok(), true);
+    let mut is_parens = false;
+    if let Expression::Group(expr1) = parse_result.unwrap().1 {
+      is_parens = true;
+      if let Expression::Int(i) = *expr1 {
+        assert_eq!(i, 123);
+      } else {
+        panic!("Expected an integer expression.")
+      }
+    }
+    assert_eq!(is_parens, true);
+
+    parse_result = parse_expression("((input))");
+    assert_eq!(parse_result.is_ok(), true);
+    let mut is_parens = false;
+    if let Expression::Group(expr1) = parse_result.unwrap().1 {
+      is_parens = true;
+      let mut is_nested_parens = false;
+      if let Expression::Group(expr2) = *expr1 {
+        is_nested_parens = true;
+        if let Expression::Input = *expr2 {
+        } else {
+          panic!("Expected inner expression to be an input")
+        }
+      }
+      assert_eq!(is_nested_parens, true);
+    }
+    assert_eq!(is_parens, true);
+
+    parse_result = parse_expression("(((AbrahamLincoln)))");
+    assert_eq!(parse_result.is_ok(), true);
+    let mut is_parens = false;
+    let mut is_nested_parens = false;
+    let mut is_nested2_parens = false;
+    if let Expression::Group(expr1) = parse_result.unwrap().1 {
+      is_parens = true;
+      if let Expression::Group(expr2) = *expr1 {
+        is_nested_parens = true;
+        if let Expression::Group(expr3) = *expr2 {
+          is_nested2_parens = true;
+          if let Expression::Ident(ident) = *expr3 {
+            assert_eq!(ident.0, "AbrahamLincoln");
+          } else {
+            panic!("Expected inner expression to be an ident")
+          }
+        }
+      }
+    }
+    assert_eq!(is_parens, true);
+    assert_eq!(is_nested_parens, true);
+    assert_eq!(is_nested2_parens, true);
   }
 }
