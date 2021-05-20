@@ -51,24 +51,16 @@ pub fn parse_function<'a>(input: &'a str) -> PResult<'a, Function> {
   let brace_open = tag("{");
   let brace_close = tag("}");
 
-  // let (theInput, (_, _, functionName, _, _, _, id1,
-  //      idRest, _, _)) = tuple(
-  //   (parseFunction, space1, parseIdent, space0, parenOpen, space0, opt(parseIdent),
-  //    many0(tuple((tag(","), space0, parseIdent, space0))), space0, parenClose)
-  // )(input)?;
+  // TODO: support:
+  //  - arbitrary number of params
+  //  - local variable declaration
+  //  - an arbitrary function body
+  //     (but there's still a single return at the end, as dictated by the grammar)
   let (the_input, (/* 'function' */ _, _, function_name, _, /* '(' */ _, _, maybe_param_indent, _, /* ')' */ _, _,
   /* '{' */ _, _, /* 'return' */ _, _, return_expr, _, /* ';' */ _, _, /* '}' */ _)) = tuple(
     (parse_fn, space1, parse_ident, space0, paren_open, space0, opt(parse_ident), space0, paren_close, space0,
      brace_open, space0, parse_return, space0, parse_expression, space0, tag(";"), space0, brace_close)
   )(input)?;
-
-  // println!("id1 = {:?}", id1);
-  // println!("idRest {:?}", idRest);
-  println!("~~~");
-  println!("theInput: {:?}", the_input);
-  println!("functionName = {:?}", function_name);
-  println!("maybeParamIdent: {:?}", maybe_param_indent);
-  println!("parsedExpr: {:?}", return_expr);
 
   let mut parameters = vec![];
   maybe_param_indent.map(|ident| parameters.push(ident));
@@ -102,7 +94,6 @@ const IDENT_REGEXP: &'static str = "^[a-zA-Z_][a-zA-Z0-9_]*";
 
 
 fn parse_ident<'a>(input: &'a str) -> PResult<'a, Ident> {
-  println!(" ::parseIdent, input = '{}'", input);
   let re = regex::Regex::new(IDENT_REGEXP).unwrap();
   let parser = nom::regexp::str::re_find::<Error<&'a str>>(re);
   let result = parser(input);
@@ -149,7 +140,7 @@ fn parse_parens<'a>(input: &'a str) -> PResult<'a, Box<Expression>> {
 fn parse_func_call<'a>(input: &'a str) -> PResult<'a, (Ident, Vec<Expression>)> {
   let paren_open = tag("(");
   let paren_close = tag(")");
-  // for now, hardcode Ident '(' ')'
+  // TODO: implement calling with arbitrary number of arguments
   let (the_input, (function_name, _, /* '(' */ _, _, maybe_arg_expr, _, /* ')' */ _ ))
     = tuple(
       (parse_ident, space0, paren_open, space0, opt(parse_expression), space0, paren_close)
@@ -166,13 +157,11 @@ fn parseStatement(input: &str) -> PResult<Statement> {
 }
 
 fn parse_expression<'a>(input_text: &'a str) -> PResult<'a, Expression> {
-  println!(" ::parse_expression, input = '{}'", input_text);
-  // FIXME: only parses ints
+  // println!(" ::parse_expression, input = '{}'", input_text);
   if let Ok((rem, parsed)) = parse_int(input_text) {
     return Ok((rem, Expression::Int(parsed)))
   }
   // int parse failed, try input
-  // let input_result = tag::<&'a str, &'a str, nom::error::Error<&'a str>>("input")(input);
   let input_result = parse_input(input_text);
   if let Ok((rem, _)) = input_result {
     let re = regex::Regex::new(IDENT_CONT_CHAR_REGEXP).unwrap();
@@ -193,6 +182,8 @@ fn parse_expression<'a>(input_text: &'a str) -> PResult<'a, Expression> {
 
   let ident_result = parse_ident(input_text);
   ident_result.map(|(rem, ident)| (rem, Expression::Ident(ident)))
+
+  // TODO: parse binary operations
 }
 
 

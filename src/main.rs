@@ -1,3 +1,6 @@
+use nom::sequence::tuple;
+use nom::character::complete::space0;
+use nom::multi::many1;
 use timpani::ast::{
     BinaryOperator,
     Expression,
@@ -61,10 +64,11 @@ fn main() {
     let parse_result = parse_function(text_prog);
     println!(" result = {:?}", parse_result);
 
-    println!("");
+    println!("\n~~~:~~~\n");
 
-    let text_prog2 = "function id(x) { return x; }";
+    let text_prog2 = "function id(x) { return x; }  function begin() { return id(54); }";
     println!("parsing '{}'", text_prog2);
-    let parse_result2 = parse_function(text_prog2);
+
+    let parse_result2 = many1(tuple((parse_function, space0)))(text_prog2);
     println!(" result = {:?}", parse_result2);
 }
