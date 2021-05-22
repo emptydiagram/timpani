@@ -1,4 +1,5 @@
 use crate::ast::{
+  BinaryOperator,
   Expression,
   Function,
   Ident,
@@ -152,16 +153,56 @@ fn parse_func_call<'a>(input: &'a str) -> PResult<'a, (Ident, Vec<Expression>)> 
   Ok((the_input, (function_name, arguments)))
 }
 
+fn parse_bin_op<'a>(input_text: &'a str) -> PResult<'a, (BinaryOperator, Box<Expression>, Box<Expression>)> {
+  // TODO
+  let expr_result = parse_expression(input_text);
+  if expr_result.is_err() {
+    return failure(Error::new(input_text, ErrorKind::RegexpFind));
+  }
+
+  let (rem, expr1) = expr_result.unwrap();
+
+  let re = regex::Regex::new(r"[+-*/]|[=><]=?").unwrap();
+  let bin_op_parser = nom::regexp::str::re_find::<Error<&'a str>>(re);
+  let bin_op_result = bin_op_parser(rem);
+  if bin_op_result.is_err() {
+    return error(Error::new(input_text, ErrorKind::RegexpFind));
+  }
+
+  let (rem, bin_op) = bin_op_result.unwrap();
+
+  let expr_result2 = parse_expression(rem);
+  if expr_result2.is_err() {
+    return failure(Error::new(rem, ErrorKind::RegexpFind));
+  }
+
+  let bin_op_type = match bin_op {
+    "+" => BinaryOperator::Add,
+    "-" => BinaryOperator::Sub,
+    "*" => BinaryOperator::Mul,
+    "/" => BinaryOperator::Div,
+    "==" => BinaryOperator::Equals,
+    ">" => BinaryOperator::GreaterThan,
+    "<" => BinaryOperator::LessThan,
+    &_ => panic!("Unexpected binary operator. This should be unreachable?")
+  };
+
+  let (rem, expr2) = expr_result2.unwrap();
+  Ok((rem, (bin_op_type, Box::new(expr1), Box::new(expr2))))
+}
+
+// TODO
 fn parseStatement(input: &str) -> PResult<Statement> {
   failure(Error::new(input, ErrorKind::Not))
 }
 
 fn parse_expression<'a>(input_text: &'a str) -> PResult<'a, Expression> {
-  // println!(" ::parse_expression, input = '{}'", input_text);
+  // int
   if let Ok((rem, parsed)) = parse_int(input_text) {
     return Ok((rem, Expression::Int(parsed)))
   }
-  // int parse failed, try input
+
+  // OR input
   let input_result = parse_input(input_text);
   if let Ok((rem, _)) = input_result {
     let re = regex::Regex::new(IDENT_CONT_CHAR_REGEXP).unwrap();
@@ -170,20 +211,28 @@ fn parse_expression<'a>(input_text: &'a str) -> PResult<'a, Expression> {
       return Ok((rem, Expression::Input));
     }
   }
+
+  // OR function call
   let func_call_result = parse_func_call(input_text);
   if let Ok((rem, (ident, expressions))) = func_call_result {
     return Ok((rem, Expression::FuncCall(ident, expressions)));
   }
 
+  // OR parens
   let parens_result = parse_parens(input_text);
   if let Ok((rem, boxed_expr)) = parens_result {
     return Ok((rem, Expression::Group(boxed_expr)));
   }
 
+  // OR binary operator
+  let bin_op_result = parse_bin_op(input_text);
+  if let Ok((rem, (bin_op, boxed_expr1, boxed_expr2))) = bin_op_result {
+    return Ok((rem, Expression::BinOp(bin_op, boxed_expr1, boxed_expr2)));
+  }
+
+  // OR ident
   let ident_result = parse_ident(input_text);
   ident_result.map(|(rem, ident)| (rem, Expression::Ident(ident)))
-
-  // TODO: parse binary operations
 }
 
 
@@ -327,4 +376,28 @@ mod tests {
     assert_eq!(is_nested_parens, true);
     assert_eq!(is_nested2_parens, true);
   }
+
+  #[test]
+  fn test_parse_expression_bin_op() {
+    let parse_result1 = parse_expression("55 + 23");
+    assert_eq!(parse_result1.is_ok(), true);
+    let mut is_bin_op = false;
+    if let Expression::BinOp(bin_op, expr1, expr2) = parse_result1.unwrap().1 {
+      is_bin_op = true;
+      assert_eq!(bin_op, BinaryOperator::Add);
+      let mut left_is_55 = false;
+      if let Expression::Int(a) = *expr1 {
+        left_is_55 = a == 55;
+      }
+      assert!(left_is_55);
+
+      let mut right_is_23 = false;
+      if let Expression::Int(a) = *expr1 {
+        right_is_23 = a == 23;
+      }
+      assert!(right_is_23);
+    }
+    assert_eq!(is_bin_op, true);
+  }
+
 }

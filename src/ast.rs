@@ -8,13 +8,14 @@ impl From<&'_ str> for Ident {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum BinaryOperator {
   Add,
   Sub,
   Mul,
   Div,
   GreaterThan,
+  LessThan,
   Equals,
 }
 
